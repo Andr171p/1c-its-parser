@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import asyncio
 
 from playwright.async_api import Browser, Page, ElementHandle
@@ -15,6 +17,14 @@ class ParagraphNode(BaseModel):
     url: str
     child: list[ParagraphNode] = Field(default_factory=list)
     parent: ParagraphNode | None = None
+
+    @property
+    def type(self) -> Literal["root", "children", "leaf"]:
+        if self.parent is None:
+            return "root"
+        elif not self.child:
+            return "leaf"
+        return "children"
 
     def path(self) -> str:
         nodes = [self]

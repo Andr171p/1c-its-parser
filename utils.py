@@ -1,4 +1,4 @@
-from playwright.async_api import async_playwright, Browser, Page
+from playwright.async_api import Browser, Page
 
 
 async def get_current_page(browser: Browser) -> Page:

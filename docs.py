@@ -1,87 +1,52 @@
-from __future__ import annotations
+from markdownify import markdownify
+from playwright.async_api import Browser, ElementHandle
 
-from typing import Literal
-
-import asyncio
-
-from playwright.async_api import Browser, Page, ElementHandle
-from pydantic import BaseModel, Field
-
-from utils import get_current_page
-
-URL = "https://its.1c.ru"
+from constants import URL
+from schemas import ParagraphNode
+from utils import get_current_page, remove_md_links, remove_inner_hrefs
 
 
-class ParagraphNode(BaseModel):
-    name: str
-    url: str
-    child: list[ParagraphNode] = Field(default_factory=list)
-    parent: ParagraphNode | None = None
-
-    @property
-    def type(self) -> Literal["root", "children", "leaf"]:
-        if self.parent is None:
-            return "root"
-        elif not self.child:
-            return "leaf"
-        return "children"
-
-    def path(self) -> str:
-        nodes = [self]
-        current = self.parent
-        while current is not None:
-            nodes.append(current.name)
-            current = current.parent
-        return "|".join(nodes[::-1])
-
-    def add_child(self, child: ParagraphNode) -> None:
-        child.parent = self
-        self.child.append(child)
-
-    def find(self, url: str) -> ParagraphNode | None:
-        if self.url == url:
-            return self
-        for child in self.child:
-            paragraph = child.find(url)
-            if paragraph is None:
-                return None
-            return paragraph
-
-
-async def find_paragraphs_urls(browser: Browser) -> set[str]:
-    links: set[str] = set()
-    root_node = ParagraphNode(name="Root", url=f"{URL}/db/edtdoc")
+async def find_paragraphs_urls(browser: Browser, root_path: str) -> ParagraphNode:
+    url = f"{URL}{root_path}"
+    root_node = ParagraphNode(name="Root", url=url)
     page = await get_current_page(browser)
-    await page.goto(f"{URL}/db/edtdoc")
+    await page.goto(url)
     div_element = await page.wait_for_selector("#w_metadata_toc")
     ul_element = await div_element.query_selector("ul")
     li_element = await ul_element.query_selector("li")
     await find_nested_paragraphs(li_element, root_node)
-    # node = root_node.find("https://its.1c.ru/db/edtdoc/content/5/hdoc")
-    print(root_node)
-    await asyncio.sleep(10)
-    return links
+    return root_node
 
 
 async def find_nested_paragraphs(
-        li_element: ElementHandle, node: ParagraphNode, max_depth: int = 2
+        li_element: ElementHandle,
+        node: ParagraphNode,
+        current_depth: int = 0,
+        max_depth: int = 5
 ) -> None:
-    depth = 0
-    if depth > max_depth:
+    if current_depth > max_depth:
         return
     link_element = await li_element.query_selector("a")
-    # print(await link_element.text_content())
-    # print(await link_element.get_attribute("href"))
-    # links.add(f"{URL}{await link_element.get_attribute("href")}")
-    node.add_child(ParagraphNode(
+    child_node = ParagraphNode(
         name=await link_element.text_content(),
         url=f"{URL}{await link_element.get_attribute("href")}",
-    ))
+    )
+    node.add_child(child_node)
     ul_element = await li_element.query_selector("ul")
     if not ul_element:
-        # print("Ветвь получена")
         return
     li_elements = await ul_element.query_selector_all("li")
     for li_element in li_elements:
-        depth += 1
-        await find_nested_paragraphs(li_element, node)
+        await find_nested_paragraphs(li_element, child_node, current_depth + 1, max_depth)
+
+
+async def parse_page(browser: Browser, url: str) -> ...:
+    page = await get_current_page(browser)
+    await page.goto(url)
+    await page.wait_for_selector("#w_metadata_doc_frame")
+    frame_content = page.frame_locator("#w_metadata_doc_frame")
+    await frame_content.locator("body").wait_for()
+    html_content = await frame_content.locator("body").inner_html()
+    html_content = remove_inner_hrefs(html_content, URL)
+    text = markdownify(html_content)
+    print(remove_md_links(text, URL))

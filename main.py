@@ -4,7 +4,8 @@ import os
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright, Browser, Page
 
-from docs import find_paragraphs_urls, parse_page
+from parser.modules.db import parse_db
+from parser.constants import DB_LINKS
 
 load_dotenv()
 
@@ -37,8 +38,11 @@ async def main() -> None:
             print("Успешный вход!")
         else:
             print("Ошибка входа")
-        await find_paragraphs_urls(browser)
-        await parse_page(browser, "https://its.1c.ru/db/edtdoc#content:10052:hdoc")
+        for db_link in DB_LINKS:
+            docs = await parse_db(browser, db_link)
+            print(len(docs))
+            print(docs[-1])
+        # await parse_page(browser, "https://its.1c.ru/db/edtdoc#content:10052:hdoc")
         await browser.close()
 
 

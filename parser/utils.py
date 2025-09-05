@@ -1,6 +1,6 @@
 import logging
 import re
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 from markdownify import markdownify
@@ -21,17 +21,12 @@ async def get_current_page(browser: Browser) -> Page:
 
 
 def html2md_pipeline(html_content: str, base_url: str) -> str:
-    '''return remove_md_links(
+    return md_links_filter(
         markdownify(
-            remove_inner_hrefs(
-                preserve_image_links(html_content, base_url)
-                , base_url
+            html_links_filter(
+                preserve_image_links(html_content, base_url), base_url
             )
         ), base_url
-    )'''
-    return remove_md_links(
-        markdownify(remove_inner_hrefs(preserve_image_links(html_content, base_url), base_url)),
-        base_url
     )
 
 
@@ -54,7 +49,7 @@ def preserve_image_links(html_content: str, base_url: str) -> str:
     return str(soup)
 
 
-def remove_inner_hrefs(html_content: str, base_url: str) -> str:
+def html_links_filter(html_content: str, base_url: str) -> str:
     """Удаляет все доменные ссылки на странице"""
     soup = BeautifulSoup(html_content, "html.parser")
     current_domain = urlparse(base_url).netloc
@@ -76,47 +71,38 @@ def remove_inner_hrefs(html_content: str, base_url: str) -> str:
     return str(soup)
 
 
-def remove_md_links(md_text: str, base_url: str) -> str:
+def md_links_filter(md_text: str, base_url: str) -> str:
     """Удаляет все относительные ссылки в Markdown тексте, но сохраняет изображения"""
     # Временная замена изображений перед обработкой
     image_placeholders = {}
-
     # Находим и временно заменяем все изображения
+
     def replace_images(match):
         placeholder = f"@@IMAGE_{len(image_placeholders)}@@"
         image_placeholders[placeholder] = match.group(0)
         return placeholder
-
     # Паттерн для изображений Markdown
     image_pattern = r"!\[.*?\]\([^)]*\)"
     md_text = re.sub(image_pattern, replace_images, md_text)
-
     # Теперь удаляем все ссылки
     domain = urlparse(base_url).netloc
     domain_pattern = re.escape(domain)
     base_url_pattern = re.escape(base_url)
-
     patterns = [
         # Markdown ссылки
         r"\[(.*?)\]\([^)]*" + domain_pattern + r"[^)]*\)",
         r"\[(.*?)\]\([^)]*" + base_url_pattern + r"[^)]*\)",
         r"\[(.*?)\]\(/[^)]*\)",
-
         # Простые URL
         r"https?://[^\s]*" + domain_pattern + r"[^\s]*",
         r"https?://[^\s]*" + base_url_pattern + r"[^\s]*",
         r"/[^\s/\?]*"
     ]
-
     for pattern in patterns:
-        # Для ссылок заменяем на текст, для URL удаляем
         if pattern.startswith(r"\["):
             md_text = re.sub(pattern, r"\1", md_text)
         else:
             md_text = re.sub(pattern, "", md_text)
-
-    # Восстанавливаем изображения
     for placeholder, image in image_placeholders.items():
         md_text = md_text.replace(placeholder, image)
-
     return md_text

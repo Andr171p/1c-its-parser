@@ -8,3 +8,7 @@ DB_LINKS: tuple = (
     "/db/kip",
     "/db/freshpub",
 )
+
+# Для валидации
+IMAGE_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".tiff", ".ico"}
+IMAGE_PATTERNS: set[str] = {"/image/", "/img/", "/images/", "/media/", "/uploads/", "image.", "img."}

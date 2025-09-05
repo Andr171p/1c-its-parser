@@ -3,7 +3,7 @@ from typing import Final
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = ROOT_DIR / ".env"
@@ -15,5 +15,9 @@ class Credentials(BaseSettings):
     username: str = ""
     password: str = ""
 
+    model_config = SettingsConfigDict(env_prefix="ITS_")
+
 
 credentials: Final[Credentials] = Credentials()
+
+print(credentials)

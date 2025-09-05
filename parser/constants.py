@@ -1,5 +1,6 @@
 # Основной адрес сайта 1C ИТС
 URL = "https://its.1c.ru"
+LOGIN_URL = "https://login.1c.ru"
 # Ссылки с разделами документации
 DB_LINKS: tuple = (
     "/db/edtdoc",

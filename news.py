@@ -6,7 +6,7 @@ from datetime import datetime
 from html2text import html2text
 from playwright.async_api import Browser, Page, ElementHandle
 
-from utils import get_current_page
+from parser.utils import get_current_page
 
 NEWS_URL = "https://its.1c.ru/news"
 
@@ -132,4 +132,5 @@ async def execute_news_pipeline(browser: Browser) -> list[str]:
     for element in elements:
         text = await parse_news(browser, element["url"])
         print(text)
-        print("\n\n\n\n")
+        print("\n\n")
+    return ...

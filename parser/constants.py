@@ -5,5 +5,5 @@ DB_LINKS: tuple = (
     "/db/edtdoc",
     "/db/cs27doc",
     "/db/kip",
-    "/db/freshpub"
+    "/db/freshpub",
 )

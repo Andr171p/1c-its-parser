@@ -1,3 +1,5 @@
+from typing import Final
+
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,3 +14,6 @@ load_dotenv(ENV_PATH)
 class Credentials(BaseSettings):
     username: str = ""
     password: str = ""
+
+
+credentials: Final[Credentials] = Credentials()
